@@ -54,15 +54,6 @@ RUN apt-get -y update \
     imagemagick
     
 
-
-##### CONDA
-RUN ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh 
-RUN echo ". /opt/conda/etc/profile.d/conda.sh" >> /.bashrc
-#ENV PATH /opt/conda/bin:$PATH
-RUN conda init bash
-SHELL ["conda", "run", "--no-capture-output",  "/bin/bash", "-c"]
-
-
 ##### PIP
 # Install common packages
 RUN pip install ipdb tensorboard pymcubes imageio PyOpenGL glfw xatlas gdown wandb ninja nimblephysics hsluv moviepy seaborn opencv-python==4.5.5.64 scikit-image einops torch_efficient_distloss
@@ -77,9 +68,6 @@ RUN pip install git+https://github.com/qubvel/segmentation_models.pytorch
 # Install Minkowski Engine
 RUN pip install git+https://github.com/NVIDIA/MinkowskiEngine.git
 
-# Install detectron2
-RUN pip install 'git+https://github.com/facebookresearch/detectron2.git'
-
 # Install WandB
 RUN pip install wandb
 
@@ -87,20 +75,10 @@ RUN pip install wandb
 RUN apt-get autoremove -y && rm -rf /tmp/* /var/tmp/* && apt-get clean && rm -rf /var/lib/apt/lists/*
 WORKDIR /repos
 
-# switch to user
 RUN useradd -u ${uid} -ms /bin/bash ${user}
-RUN chown -R ${user} /workspace
-USER "${user}"
-
+RUN chown -R ${user} /opt /repos /usr
+USER ${user}
 ENV DOCKERMODE="YES"
-
-# Make SSH available
-EXPOSE 22
-EXPOSE 42421
-# TensorBoard https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/docker/Dockerfile.gpu
-EXPOSE 6006
-# IPython https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/docker/Dockerfile.gpu
-EXPOSE 8888
 
 # interactive console
 ENV DEBIAN_FRONTEND teletype
