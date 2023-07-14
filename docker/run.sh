@@ -24,7 +24,7 @@ if [ "$#" -ne 0 ]; then
 		  -e SHELL\
       -e DISPLAY=$DISPLAY\
 		  -e DOCKER=1\
-		  --name module_name\
-		  -v $(dirname `pwd`):/repos/module_name\
+		  --name grid_fusion_pytorch\
+		  -v $(dirname `pwd`):/repos/grid_fusion_pytorch\
 		  -v /home/nfs/inf6/data/datasets:/home/nfs/inf6/data/datasets\
-		  -it module_name
+		  -it grid_fusion_pytorch
