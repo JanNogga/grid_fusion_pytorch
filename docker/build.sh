@@ -10,5 +10,5 @@ fi
 docker build\
   --build-arg user=$USER\
   --build-arg uid=$UID\
-  -t module_name\
+  -t voxel_grid_fusion\
   -f Dockerfile .
