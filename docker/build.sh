@@ -10,5 +10,5 @@ fi
 docker build\
   --build-arg user=$USER\
   --build-arg uid=$UID\
-  -t voxel_grid_fusion\
+  -t grid_fusion_pytorch\
   -f Dockerfile .
