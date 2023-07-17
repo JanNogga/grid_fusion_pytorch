@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:23.06-py3
+FROM nvcr.io/nvidia/pytorch:23.04-py3
 
 ARG user
 ARG uid
@@ -56,7 +56,7 @@ RUN apt-get -y update \
 
 ##### PIP
 # Install common packages
-RUN pip install ipdb tensorboard pymcubes imageio PyOpenGL glfw xatlas gdown wandb ninja nimblephysics hsluv moviepy seaborn opencv-python==4.5.5.64 scikit-image einops torch_efficient_distloss
+RUN pip install ipdb tensorboard pymcubes imageio PyOpenGL glfw xatlas gdown wandb ninja hsluv moviepy seaborn opencv-python==4.5.5.64 scikit-image einops torch_efficient_distloss
 RUN pip install --no-deps lpips
 
 # Install torch-scatter
