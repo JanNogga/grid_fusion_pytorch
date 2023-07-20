@@ -22,5 +22,5 @@ increment_misses_util_cuda = load(
 # def custom_add(A,B):
 #     return add_util_cuda.vector_add_free_function(A,B)
 
-def increment_misses(Grids, Origs, Dirs, Dists):
-    return increment_misses_util_cuda.increment_misses_free_function(Grids, Origs, Dirs, Dists)
+def increment_misses(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, n_steps=16):
+    return increment_misses_util_cuda.increment_misses_free_function(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, n_steps)
