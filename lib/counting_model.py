@@ -11,7 +11,7 @@ counting_model_util_cuda = load(
             for path in ['cuda/counting_model.cpp', 'cuda/counting_model.cu']],
         verbose=True)
 
-def apply_counting_model(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg=None, n_steps=16, background_range = 5., verbose=False):
+def apply_counting_model(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg=None, n_steps=16, background_range = 5., verbose=False, invalidate_background=False):
     # compute number of class channels
     n_classes = Grids.shape[1] - 2
     # if class channels are present, check if we have a semantic segmentation
@@ -26,14 +26,14 @@ def apply_counting_model(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg=N
             assert Semseg.shape[-1] == n_classes
             # modify distances for background class rays
             dists_background = Dists.clone()
-            dists_background[Semseg.sum(-1) > 0] = background_range
+            dists_background[Semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
             return counting_model_util_cuda.counting_model_bayes_free_function(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg, n_steps)
     # if there are no class channels, apply counting model without Bayes filter
     else:
         # if there is a semantic segmentation, warn the user and apply counting model without using it
         if Semseg is not None:
             dists_background = Dists.clone()
-            dists_background[Semseg.sum(-1) > 0] = background_range
+            dists_background[Semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
             if verbose:
                 print('Semantic segmentation provided, but no class channels present in voxel grid! Applying counting model without Bayes filter.')
         else:
