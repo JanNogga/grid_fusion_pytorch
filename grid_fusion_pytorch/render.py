@@ -108,7 +108,7 @@ def batched_grid_forward(xyz, grid, range_min, range_max, class_channels=True):
 
 # adapted from https://github.com/vsitzmann/light-field-networks/blob/master/geometry.py
 # label_masks, world_cams, cam_ks, n_rays=-1, depth=None
-def sample_rays(world_cam, cam_k, n_rays=-1, semseg=None, depth=None, H=None, W=None):
+def sample_rays(world_cam, cam_k, n_rays=-1, semseg=None, depth=None, H=None, W=None, normalize=True):
     assert semseg is not None or depth is not None or (H is not None and W is not None)
     device = world_cam.device
     # get ray origins from world_cam
@@ -151,7 +151,10 @@ def sample_rays(world_cam, cam_k, n_rays=-1, semseg=None, depth=None, H=None, W=
     # more readable version (swap if this is bad for performance)
     world_coords = (world_cam.unsqueeze(-3) @ cam_coords_hom.unsqueeze(-1))[...,:3, 0]
     # get normalized ray directions
-    ray_dirs = F.normalize(world_coords - ray_origs.unsqueeze(-2), dim=-1)
+    if normalize:
+        ray_dirs = F.normalize(world_coords - ray_origs.unsqueeze(-2), dim=-1)
+    else:
+        ray_dirs = world_coords - ray_origs.unsqueeze(-2)
     return ray_origs, ray_dirs, gt_labels, gt_depth
 
 ### get uniformly spaced points from rays

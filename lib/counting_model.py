@@ -1,5 +1,6 @@
 import os
 
+import torch
 from torch.utils.cpp_extension import load
 
 parent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -27,7 +28,9 @@ def apply_counting_model(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg=N
             # modify distances for background class rays
             dists_background = Dists.clone()
             dists_background[Semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
-            return counting_model_util_cuda.counting_model_bayes_free_function(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg, n_steps)
+            grid_update = counting_model_util_cuda.counting_model_bayes_free_function(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg, n_steps)
+            grid_update[:,2:] -= torch.logsumexp(grid_update[:,2:], dim=1, keepdim=True)
+            return grid_update
     # if there are no class channels, apply counting model without Bayes filter
     else:
         # if there is a semantic segmentation, warn the user and apply counting model without using it
