@@ -94,10 +94,6 @@ __global__ void counting_model_free_function_gpu(
     cur_pos_x = Origs[scene_idx][camera_idx][0] + Dirs[scene_idx][camera_idx][ray_idx][0] * dist;
     cur_pos_y = Origs[scene_idx][camera_idx][1] + Dirs[scene_idx][camera_idx][ray_idx][1] * dist;
     cur_pos_z = Origs[scene_idx][camera_idx][2] + Dirs[scene_idx][camera_idx][ray_idx][2] * dist;
-    // below works too but small errors could accumulate for the hit counter (not a big deal)
-    //cur_pos_x += Dirs[scene_idx][camera_idx][ray_idx][0] * step_size;
-    //cur_pos_y += Dirs[scene_idx][camera_idx][ray_idx][1] * step_size;
-    //cur_pos_z += Dirs[scene_idx][camera_idx][ray_idx][2] * step_size;
 
     rel_pos_x = (cur_pos_x - RangeMin[0]) / (RangeMax[0] - RangeMin[0]);
     rel_pos_y = (cur_pos_y - RangeMin[1]) / (RangeMax[1] - RangeMin[1]);
@@ -230,12 +226,9 @@ __global__ void counting_model_bayes_free_function_gpu(
         rel_pos_x = (cur_pos_x - RangeMin[0]) / (RangeMax[0] - RangeMin[0]);
         rel_pos_y = (cur_pos_y - RangeMin[1]) / (RangeMax[1] - RangeMin[1]);
         rel_pos_z = (cur_pos_z - RangeMin[2]) / (RangeMax[2] - RangeMin[2]);
-        // h = (int)(rel_pos_x * (H-1));
-        // w = (int)(rel_pos_y * (W-1));
-        // d = (int)(rel_pos_z * (D-1));
-        h = (int)(rel_pos_x * H);
-        w = (int)(rel_pos_y * W);
-        d = (int)(rel_pos_z * D);
+        h = (int)(rel_pos_x * (H-1));
+        w = (int)(rel_pos_y * (W-1));
+        d = (int)(rel_pos_z * (D-1));
         if(h < 0 || h >= H || w < 0 || w >= W || d < 0 || d >= D){
             h_prev = h;
             w_prev = w;
@@ -254,20 +247,13 @@ __global__ void counting_model_bayes_free_function_gpu(
     cur_pos_x = Origs[scene_idx][camera_idx][0] + Dirs[scene_idx][camera_idx][ray_idx][0] * dist;
     cur_pos_y = Origs[scene_idx][camera_idx][1] + Dirs[scene_idx][camera_idx][ray_idx][1] * dist;
     cur_pos_z = Origs[scene_idx][camera_idx][2] + Dirs[scene_idx][camera_idx][ray_idx][2] * dist;
-    // below works too but small errors could accumulate for the hit counter (not a big deal)
-    //cur_pos_x += Dirs[scene_idx][camera_idx][ray_idx][0] * step_size;
-    //cur_pos_y += Dirs[scene_idx][camera_idx][ray_idx][1] * step_size;
-    //cur_pos_z += Dirs[scene_idx][camera_idx][ray_idx][2] * step_size;
 
     rel_pos_x = (cur_pos_x - RangeMin[0]) / (RangeMax[0] - RangeMin[0]);
     rel_pos_y = (cur_pos_y - RangeMin[1]) / (RangeMax[1] - RangeMin[1]);
     rel_pos_z = (cur_pos_z - RangeMin[2]) / (RangeMax[2] - RangeMin[2]);
-    // h = (int)(rel_pos_x * (H-1));
-    // w = (int)(rel_pos_y * (W-1));
-    // d = (int)(rel_pos_z * (D-1));
-    h = (int)(rel_pos_x * H);
-    w = (int)(rel_pos_y * W);
-    d = (int)(rel_pos_z * D);
+    h = (int)(rel_pos_x * (H-1));
+    w = (int)(rel_pos_y * (W-1));
+    d = (int)(rel_pos_z * (D-1));
     
     if(h >= 0 && h < H && w >= 0 && w < W && d >= 0 && d < D){
         // make sure the voxel class is not invalid
