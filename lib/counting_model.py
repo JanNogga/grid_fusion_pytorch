@@ -12,33 +12,109 @@ counting_model_util_cuda = load(
             for path in ['cuda/counting_model.cpp', 'cuda/counting_model.cu']],
         verbose=True)
 
-def apply_counting_model(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg=None, n_steps=16, background_range = 5., verbose=False, invalidate_background=False):
-    # compute number of class channels
-    n_classes = Grids.shape[1] - 2
-    # if class channels are present, check if we have a semantic segmentation
-    if n_classes > 0:
-        # if there is no semantic segmentation, warn the user and apply counting model without it
-        if Semseg is None:
+def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, grid_semantic=None, ray_semseg=None, n_steps=16, background_range = 5., verbose=False, invalidate_background=False):
+    # TODO: assert validity of inputs
+    # make sure the shape of grid_counter is suitable
+    if len(grid_counter.shape) == 4:
+        if verbose:
+            print('Warning: grid_counter should be 5D, but is 4D. Adding dummy batch dimension.')
+        grid_counter = grid_counter.unsqueeze(0)
+    elif len(grid_counter.shape) == 3:
+        if verbose:
+            print('Warning: grid_counter should be 5D, but is 3D. Adding dummy batch and channel dimensions.')
+        grid_counter = grid_counter.unsqueeze(0).unsqueeze(1)
+    # check whether there is a channel for a miss counter - if not assume that only hits are counted
+    n_counters = grid_counter.shape[1]
+    # make sure the shapes of min_range and max_range are suitable
+    if len(min_range.shape) == 1:
+        if verbose:
+            print('Warning: min_range should be 2D, but is not. Adding dummy batch dimension.')
+        min_range = min_range.unsqueeze(0)
+    if min_range.shape[0] != grid_counter.shape[0]:
+        if verbose:
+            print('Warning: min_range should have the same batch dimension as grid_counter, but does not. Assuming equal ranges for all scenes in batch.')
+        min_range = min_range.expand(grid_counter.shape[0], -1)
+    if len(max_range.shape) == 1:
+        if verbose:
+            print('Warning: max_range should be 2D, but is not. Adding dummy batch dimension.')
+        max_range = max_range.unsqueeze(0)
+    if max_range.shape[0] != grid_counter.shape[0]:
+        if verbose:
+            print('Warning: max_range should have the same batch dimension as grid_counter, but does not. Assuming equal ranges for all scenes in batch.')
+        max_range = max_range.expand(grid_counter.shape[0], -1)
+    # if provided, make sure the shape of the semantic voxel grid is suitable
+    if grid_semantic is not None:
+        if len(grid_semantic.shape) == 4:
             if verbose:
-                print('Class channels detected in voxel grid, but no semantic segmentation provided! Applying counting model without Bayes filter.')
-            return counting_model_util_cuda.counting_model_free_function(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, n_steps)
-        else:
-            # if there is a semantic segmentation, make sure that the number of classes matches
-            assert Semseg.shape[-1] == n_classes
-            # modify distances for background class rays
-            dists_background = Dists.clone()
-            dists_background[Semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
-            grid_update = counting_model_util_cuda.counting_model_bayes_free_function(Grids, Origs, Dirs, Dists, RangeMin, RangeMax, Semseg, n_steps)
-            grid_update[:,2:] -= torch.logsumexp(grid_update[:,2:], dim=1, keepdim=True)
-            return grid_update
-    # if there are no class channels, apply counting model without Bayes filter
+                print('Warning: grid_semantic should be 5D, but is 4D. Adding dummy batch dimension.')
+            grid_semantic = grid_semantic.unsqueeze(0)
+        # compute number of class channels
+        n_classes = grid_semantic.shape[1]
     else:
-        # if there is a semantic segmentation, warn the user and apply counting model without using it
-        if Semseg is not None:
-            dists_background = Dists.clone()
-            dists_background[Semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
-            if verbose:
-                print('Semantic segmentation provided, but no class channels present in voxel grid! Applying counting model without Bayes filter.')
+        n_classes = 0
+    # if only hits need to be counted, refer to the corresponding functions
+    if n_counters == 1:
+        # check whether a semantic map was provided
+        if n_classes > 0:
+            # if there is no semantic segmentation for rays, warn the user and apply counting model without it
+            if ray_semseg is None:
+                if verbose:
+                    print('Warning: semantic voxel grid detected, but no semantic segmentation provided for rays! Counting hits without Bayes filter.')
+                return counting_model_util_cuda.hit_counter_free_function(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, n_steps)
+            else:
+            # if there is a semantic segmentation, make sure that the number of classes matches
+                assert ray_semseg.shape[-1] == n_classes
+                # modify distances for background class rays
+                ray_distances_background = ray_distances.clone()
+                ray_distances_background[ray_semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
+                # obtain aggregated hit counter and fused semantic map
+                grid_counter_out, grid_semantic_out = counting_model_util_cuda.hit_counter_bayes_free_function(grid_counter, grid_semantic, ray_origins, ray_directions, ray_distances_background, ray_semseg, min_range, max_range, n_steps)
+                # normalize semantic map
+                grid_semantic_out -= torch.logsumexp(grid_semantic_out, dim=1, keepdim=True)
+                return grid_counter_out, grid_semantic_out
+        # if there is no semantic map, aggregate hit counter without Bayes filter
         else:
-            dists_background = Dists
-        return counting_model_util_cuda.counting_model_free_function(Grids, Origs, Dirs, dists_background, RangeMin, RangeMax, n_steps)
+            # if there is a semantic segmentation, warn the user, mask background and count hits without Bayes filter
+            if ray_semseg is not None:
+                ray_distances_background = ray_distances.clone()
+                # we never want to count background rays as hits
+                ray_distances_background[ray_semseg.sum(-1) > 0] = -1.
+                if verbose:
+                    print('Warning: semantic segmentation along rays detected, but no semantic map given! Incrementing hit counter for foreground pixels without Bayes filter.')
+            else:
+                ray_distances_background = ray_distances
+            return counting_model_util_cuda.hit_counter_free_function(grid_counter, ray_origins, ray_directions, ray_distances_background, min_range, max_range, n_steps)
+    # on the other hand, if misses are counted too, refer to the corresponding functions
+    else:
+        if n_counters > 2:
+            if verbose:
+                print('Warning: grid_counter should have 1 or 2 channels, but has more. Only using first two channels.')
+        # check whether a semantic map was provided
+        if n_classes > 0:
+            # if there is no semantic segmentation, warn the user and apply counting model without it
+            if ray_semseg is None:
+                if verbose:
+                    print('Warning: semantic voxel grid detected, but no semantic segmentation provided for rays! Applying counting model without Bayes filter.')
+                return counting_model_util_cuda.counting_model_free_function(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, n_steps), None
+            else:
+                # if there is a semantic segmentation, make sure that the number of classes matches
+                assert ray_semseg.shape[-1] == n_classes
+                # modify distances for background class rays
+                ray_distances_background = ray_distances.clone()
+                ray_distances_background[ray_semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
+                # apply counting model and obtain fused semantic map
+                grid_counter_out, grid_semantic_out = counting_model_util_cuda.counting_model_bayes_free_function(grid_counter, grid_semantic, ray_origins, ray_directions, ray_distances_background, ray_semseg, min_range, max_range, n_steps)
+                # normalize semantic map
+                grid_semantic_out -= torch.logsumexp(grid_semantic_out, dim=1, keepdim=True)
+                return grid_counter_out, grid_semantic_out
+        # if there are no class channels, apply counting model without Bayes filter
+        else:
+            # if there is a semantic segmentation, warn the user and apply counting model without using it
+            if ray_semseg is not None:
+                ray_distances_background = ray_distances.clone()
+                ray_distances_background[ray_semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
+                if verbose:
+                    print('Warning: semantic segmentation along rays detected, but no semantic map given! Applying counting model without Bayes filter.')
+            else:
+                ray_distances_background = ray_distances
+            return counting_model_util_cuda.counting_model_free_function(grid_counter, ray_origins, ray_directions, ray_distances_background, min_range, max_range, n_steps), None
