@@ -158,3 +158,5 @@ cython_debug/
 *.mp4
 *.npy
 *.pt
+
+settings.json

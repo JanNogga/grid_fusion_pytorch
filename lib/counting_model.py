@@ -12,8 +12,8 @@ counting_model_util_cuda = load(
             for path in ['cuda/counting_model.cpp', 'cuda/counting_model.cu']],
         verbose=True)
 
-def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, grid_semantic=None, ray_semseg=None, n_steps=16, background_range = 5., verbose=False, invalidate_background=False):
-    # TODO: assert validity of inputs
+def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, grid_semantic=None, ray_semseg=None, n_steps=2048, background_range = 5., verbose=False, invalidate_background=False):
+    # TODO: assert validity of inputs and document function
     # make sure the shape of grid_counter is suitable
     if len(grid_counter.shape) == 4:
         if verbose:
