@@ -4,7 +4,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
-import torch_scatter
+#import torch_scatter
 from typing import Optional, Tuple, List, Union, Callable
 
 # convert Nx3 grid coords to 1D index given world size
@@ -32,64 +32,64 @@ def get_grid(batch_size, channels, world_size, device, dtype=torch.float32):
     voxel_grid[:,-1:] = 0
     return voxel_grid
 
-# point cloud channels: x + y + z + class channels + features
-# grid channels: density + class channels + features + hit counter + refine counter
-def batch_fuse_to_grid(pcd, grid=None, world_size=None, range_min=None,
-                        range_max=None, channels=None, density_step=None, dtype=torch.float32):
-    assert grid is not None or (world_size is not None and channels is not None)
-    batch_size = pcd.shape[0]
-    device = pcd.device
-    dtype = pcd.dtype
-    if grid is None:
-        voxel_grid = get_grid(batch_size, channels, world_size, device, dtype=dtype)
-    else:
-        voxel_grid = grid
-        grid_size = voxel_grid.shape[-3:]
-    grid_size = world_size.clone().float().to(device)
-    batched_grid_size = torch.tensor([*world_size, batch_size]).float().to(device)
-    # pcd is a batch of xyz + C semantic channels point cloud padded to N points per batch, identify original vals
-    dim = len(grid_size)
-    pad_mask = (pcd[...,dim:] >= 0.).all(-1)
-    # create batch-dim fingerprint of point cloud so we don't forget what is from which batch
-    fingerprint = torch.arange(batch_size).unsqueeze(-1).expand_as(pcd[...,0]).unsqueeze(-1).to(device)
-    # mask the point cloud to use only valid points
-    pcd_masked = pcd[pad_mask]
-    # split up the rest into coordinates and distributions
-    coords = pcd_masked[..., :dim]
-    dists = pcd_masked[..., dim:]
-    # measurements distributions are processed in logspace
-    dists = torch.log(dists)
-    #print('Coords and Dists shape:', coords.shape, dists.shape)
-    # convert 3D coordinates to 3D voxel grid indices
-    rel_inds = torch.div((coords - range_min[:3].to(device)) / (range_max[:3].to(device) - range_min[:3].to(device)), (1/grid_size), rounding_mode='trunc')
-    # apply fingerprint so we don't forget which batch each valid index belongs to
-    rel_inds = torch.cat([rel_inds, fingerprint[pad_mask]], -1)
-    #print('ALLCLOSE?', torch.allclose(rel_inds_bak, rel_inds % grid_size.view((1,3))))
-    # convert (3+1)D grid indices to corresponding 1D indices for uniqueness check
-    inds = batched_ravel_index(rel_inds.double(), batched_grid_size.double()).long()
-    # get N' unique voxel ids
-    unique, inverse = torch.unique(inds, sorted=False, return_inverse=True)
-    #print('Unique and Inverse shapes:', unique.shape, inverse.shape)
-    # fuse new measurements accordingly
-    #print('Scatter: dist and inv shapes:', dists.shape, inverse.shape)
-    vals = torch_scatter.scatter(dists, inverse, dim=0, reduce='sum')
-    # compute how many times each voxel was updated
-    val_counter = torch_scatter.scatter(torch.ones_like(dists[:,:1]), inverse, dim=0, reduce='sum')
-    #print('Update vals shape:', vals.shape)
-    #unravel unique 1D indices to get (3+1)D voxel ids
-    inds = batched_unravel_index(unique.unsqueeze(-1).double(), batched_grid_size.double()).long()
-    #print('voxel ids shape:', inds.shape)
-    #print(voxel_grid[inds[...,-1], :,  inds[...,0], inds[...,1], inds[...,2]].shape)
-    # update density
-    voxel_grid[inds[...,-1], 0,  inds[...,0], inds[...,1], inds[...,2]] += density_step * val_counter.squeeze(-1)
-    # update hit counter
-    voxel_grid[inds[...,-1], -1,  inds[...,0], inds[...,1], inds[...,2]] += val_counter.squeeze(-1)
-    # fuse combined values to grid -> data shaped N' x C is updated here
-    voxel_grid[inds[...,-1], 1:-1,  inds[...,0], inds[...,1], inds[...,2]] += vals
-    # numerically stable as possible log-sum-exp normalization
-    voxel_grid[inds[...,-1], 1:-1,  inds[...,0], inds[...,1], inds[...,2]] -= torch.logsumexp(voxel_grid[inds[...,-1], 1:-1,  inds[...,0], inds[...,1], inds[...,2]] , dim=1, keepdim=True)
-    #print('Batched voxel_grid')
-    return voxel_grid
+# # point cloud channels: x + y + z + class channels + features
+# # grid channels: density + class channels + features + hit counter + refine counter
+# def batch_fuse_to_grid(pcd, grid=None, world_size=None, range_min=None,
+#                         range_max=None, channels=None, density_step=None, dtype=torch.float32):
+#     assert grid is not None or (world_size is not None and channels is not None)
+#     batch_size = pcd.shape[0]
+#     device = pcd.device
+#     dtype = pcd.dtype
+#     if grid is None:
+#         voxel_grid = get_grid(batch_size, channels, world_size, device, dtype=dtype)
+#     else:
+#         voxel_grid = grid
+#         grid_size = voxel_grid.shape[-3:]
+#     grid_size = world_size.clone().float().to(device)
+#     batched_grid_size = torch.tensor([*world_size, batch_size]).float().to(device)
+#     # pcd is a batch of xyz + C semantic channels point cloud padded to N points per batch, identify original vals
+#     dim = len(grid_size)
+#     pad_mask = (pcd[...,dim:] >= 0.).all(-1)
+#     # create batch-dim fingerprint of point cloud so we don't forget what is from which batch
+#     fingerprint = torch.arange(batch_size).unsqueeze(-1).expand_as(pcd[...,0]).unsqueeze(-1).to(device)
+#     # mask the point cloud to use only valid points
+#     pcd_masked = pcd[pad_mask]
+#     # split up the rest into coordinates and distributions
+#     coords = pcd_masked[..., :dim]
+#     dists = pcd_masked[..., dim:]
+#     # measurements distributions are processed in logspace
+#     dists = torch.log(dists)
+#     #print('Coords and Dists shape:', coords.shape, dists.shape)
+#     # convert 3D coordinates to 3D voxel grid indices
+#     rel_inds = torch.div((coords - range_min[:3].to(device)) / (range_max[:3].to(device) - range_min[:3].to(device)), (1/grid_size), rounding_mode='trunc')
+#     # apply fingerprint so we don't forget which batch each valid index belongs to
+#     rel_inds = torch.cat([rel_inds, fingerprint[pad_mask]], -1)
+#     #print('ALLCLOSE?', torch.allclose(rel_inds_bak, rel_inds % grid_size.view((1,3))))
+#     # convert (3+1)D grid indices to corresponding 1D indices for uniqueness check
+#     inds = batched_ravel_index(rel_inds.double(), batched_grid_size.double()).long()
+#     # get N' unique voxel ids
+#     unique, inverse = torch.unique(inds, sorted=False, return_inverse=True)
+#     #print('Unique and Inverse shapes:', unique.shape, inverse.shape)
+#     # fuse new measurements accordingly
+#     #print('Scatter: dist and inv shapes:', dists.shape, inverse.shape)
+#     vals = torch_scatter.scatter(dists, inverse, dim=0, reduce='sum')
+#     # compute how many times each voxel was updated
+#     val_counter = torch_scatter.scatter(torch.ones_like(dists[:,:1]), inverse, dim=0, reduce='sum')
+#     #print('Update vals shape:', vals.shape)
+#     #unravel unique 1D indices to get (3+1)D voxel ids
+#     inds = batched_unravel_index(unique.unsqueeze(-1).double(), batched_grid_size.double()).long()
+#     #print('voxel ids shape:', inds.shape)
+#     #print(voxel_grid[inds[...,-1], :,  inds[...,0], inds[...,1], inds[...,2]].shape)
+#     # update density
+#     voxel_grid[inds[...,-1], 0,  inds[...,0], inds[...,1], inds[...,2]] += density_step * val_counter.squeeze(-1)
+#     # update hit counter
+#     voxel_grid[inds[...,-1], -1,  inds[...,0], inds[...,1], inds[...,2]] += val_counter.squeeze(-1)
+#     # fuse combined values to grid -> data shaped N' x C is updated here
+#     voxel_grid[inds[...,-1], 1:-1,  inds[...,0], inds[...,1], inds[...,2]] += vals
+#     # numerically stable as possible log-sum-exp normalization
+#     voxel_grid[inds[...,-1], 1:-1,  inds[...,0], inds[...,1], inds[...,2]] -= torch.logsumexp(voxel_grid[inds[...,-1], 1:-1,  inds[...,0], inds[...,1], inds[...,2]] , dim=1, keepdim=True)
+#     #print('Batched voxel_grid')
+#     return voxel_grid
 
 # out: if class_channels: batch_size x N_max x (C+1)
 #                   else: batch_size x N_max x 1

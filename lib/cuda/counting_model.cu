@@ -40,7 +40,7 @@ __global__ void counting_model_free_function_gpu(
 
     float dist = ray_distances[scene_idx][camera_idx][ray_idx];
     // if the distance is invalid, don't do anything
-    if(dist < 0){
+    if(dist != dist){
         return;
     }
 
@@ -189,7 +189,7 @@ __global__ void counting_model_bayes_free_function_gpu(
 
     float dist = ray_distances[scene_idx][camera_idx][ray_idx];
     // if the distance is invalid, don't do anything
-    if(dist < 0){
+    if(dist != dist){
         return;
     }
 
@@ -253,7 +253,7 @@ __global__ void counting_model_bayes_free_function_gpu(
     if(h >= 0 && h < H && w >= 0 && w < W && d >= 0 && d < D){
         // make sure the voxel class is not invalid
         for (int c = 0; c < C; c++) {
-            if(ray_semseg[scene_idx][camera_idx][ray_idx][c] > 0.){
+            if(ray_semseg[scene_idx][camera_idx][ray_idx][c] != ray_semseg[scene_idx][camera_idx][ray_idx][c]){
                 return;
             }
         }
@@ -353,7 +353,7 @@ __global__ void hit_counter_free_function_gpu(
 
     float dist = ray_distances[scene_idx][camera_idx][ray_idx];
     // if the distance is invalid, don't do anything
-    if(dist < 0){
+    if(dist != dist){
         return;
     }
 
@@ -462,7 +462,7 @@ __global__ void hit_counter_bayes_free_function_gpu(
 
     float dist = ray_distances[scene_idx][camera_idx][ray_idx];
     // if the distance is invalid, don't do anything
-    if(dist < 0){
+    if(dist != dist){
         return;
     }
 
@@ -491,7 +491,7 @@ __global__ void hit_counter_bayes_free_function_gpu(
     if(h >= 0 && h < H && w >= 0 && w < W && d >= 0 && d < D){
         // make sure the voxel class is not invalid
         for (int c = 0; c < C; c++) {
-            if(ray_semseg[scene_idx][camera_idx][ray_idx][c] > 0.){
+            if(ray_semseg[scene_idx][camera_idx][ray_idx][c] != ray_semseg[scene_idx][camera_idx][ray_idx][c]){
                 return;
             }
         }

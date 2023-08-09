@@ -11,7 +11,6 @@ T div_round_up(T val, T divisor) {
 }
 
 __global__ void point_cloud_hit_counter_free_function_gpu(
-    const int num_scenes,
     const int num_points,
     const int numel,
     const float H,
@@ -73,9 +72,9 @@ torch::Tensor point_cloud_hit_counter_free_function(const torch::Tensor grid_cou
     torch::Tensor counter_out = grid_counter.detach().clone();
     CHECK(counter_out.is_cuda()) << "counter_out should be in GPU memory! Please call .cuda() on the tensor.";
     int num_scenes = point_cloud_locations.size(0);
-    int num_points = point_cloud_locations.size(2);
+    int num_points = point_cloud_locations.size(1);
     int numel = num_scenes*num_points;
-
+    
     float H = (float) grid_counter.size(2);
     float W = (float) grid_counter.size(3);
     float D = (float) grid_counter.size(4);
@@ -83,7 +82,6 @@ torch::Tensor point_cloud_hit_counter_free_function(const torch::Tensor grid_cou
     const dim3 blocks = {(unsigned int)div_round_up(numel, BLOCK_SIZE), 1, 1};
 
     point_cloud_hit_counter_free_function_gpu<<<blocks, BLOCK_SIZE>>>(
-        num_scenes,
         num_points,
         numel,
         H,
@@ -100,7 +98,6 @@ torch::Tensor point_cloud_hit_counter_free_function(const torch::Tensor grid_cou
 
 
 __global__ void point_cloud_hit_counter_bayes_free_function_gpu(
-    const int num_scenes,
     const int num_points,
     const int numel,
     const float H,
@@ -175,7 +172,7 @@ std::vector<torch::Tensor> point_cloud_hit_counter_bayes_free_function(const tor
     CHECK(counter_out.is_cuda()) << "counter_out should be in GPU memory! Please call .cuda() on the tensor.";
     CHECK(semantic_map_out.is_cuda()) << "semantic_map_out should be in GPU memory! Please call .cuda() on the tensor.";
     int num_scenes = point_cloud_locations.size(0);
-    int num_points = point_cloud_locations.size(2);
+    int num_points = point_cloud_locations.size(1);
     int numel = num_scenes*num_points;
 
     float H = (float) grid_counter.size(2);
@@ -186,7 +183,6 @@ std::vector<torch::Tensor> point_cloud_hit_counter_bayes_free_function(const tor
     const dim3 blocks = {(unsigned int)div_round_up(numel, BLOCK_SIZE), 1, 1};
 
     point_cloud_hit_counter_bayes_free_function_gpu<<<blocks, BLOCK_SIZE>>>(
-        num_scenes,
         num_points,
         numel,
         H,

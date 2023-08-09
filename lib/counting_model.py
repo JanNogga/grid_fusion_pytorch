@@ -13,6 +13,12 @@ counting_model_util_cuda = load(
         verbose=True)
 
 def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, grid_semantic=None, ray_semseg=None, n_steps=2048, background_range = 5., verbose=False, invalidate_background=False):
+    assert grid_counter.is_cuda
+    assert ray_origins.is_cuda
+    assert ray_directions.is_cuda
+    assert ray_distances.is_cuda
+    assert grid_semantic is None or grid_semantic.is_cuda
+    assert ray_semseg is None or ray_semseg.is_cuda
     # TODO: assert validity of inputs and document function
     # make sure the shape of grid_counter is suitable
     if len(grid_counter.shape) == 4:
@@ -66,7 +72,7 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
                 assert ray_semseg.shape[-1] == n_classes
                 # modify distances for background class rays
                 ray_distances_background = ray_distances.clone()
-                ray_distances_background[ray_semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
+                ray_distances_background[torch.isnan(ray_semseg).any(-1)] = float('nan') if invalidate_background else background_range
                 # obtain aggregated hit counter and fused semantic map
                 grid_counter_out, grid_semantic_out = counting_model_util_cuda.hit_counter_bayes_free_function(grid_counter, grid_semantic, ray_origins, ray_directions, ray_distances_background, ray_semseg, min_range, max_range, n_steps)
                 # normalize semantic map
@@ -78,7 +84,8 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
             if ray_semseg is not None:
                 ray_distances_background = ray_distances.clone()
                 # we never want to count background rays as hits
-                ray_distances_background[ray_semseg.sum(-1) > 0] = -1.
+                #ray_distances_background[ray_semseg.sum(-1) > 0] = -1.
+                ray_distances_background[torch.isnan(ray_semseg).any(-1)] = float('nan')
                 if verbose:
                     print('Warning: semantic segmentation along rays detected, but no semantic map given! Incrementing hit counter for foreground pixels without Bayes filter.')
             else:
@@ -101,7 +108,7 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
                 assert ray_semseg.shape[-1] == n_classes
                 # modify distances for background class rays
                 ray_distances_background = ray_distances.clone()
-                ray_distances_background[ray_semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
+                ray_distances_background[torch.isnan(ray_semseg).any(-1)] = float('nan') if invalidate_background else background_range
                 # apply counting model and obtain fused semantic map
                 grid_counter_out, grid_semantic_out = counting_model_util_cuda.counting_model_bayes_free_function(grid_counter, grid_semantic, ray_origins, ray_directions, ray_distances_background, ray_semseg, min_range, max_range, n_steps)
                 # normalize semantic map
@@ -112,7 +119,7 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
             # if there is a semantic segmentation, warn the user and apply counting model without using it
             if ray_semseg is not None:
                 ray_distances_background = ray_distances.clone()
-                ray_distances_background[ray_semseg.sum(-1) > 0] = background_range if not invalidate_background else -1.
+                ray_distances_background[torch.isnan(ray_semseg).any(-1)] = float('nan') if invalidate_background else background_range
                 if verbose:
                     print('Warning: semantic segmentation along rays detected, but no semantic map given! Applying counting model without Bayes filter.')
             else:

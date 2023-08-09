@@ -56,20 +56,8 @@ RUN apt-get -y update \
 
 ##### PIP
 # Install common packages
-RUN pip install ipdb tensorboard pymcubes imageio PyOpenGL glfw xatlas gdown wandb ninja hsluv moviepy seaborn opencv-python==4.5.5.64 scikit-image einops torch_efficient_distloss
+RUN pip install ipdb tensorboard pymcubes imageio PyOpenGL glfw xatlas gdown wandb ninja hsluv moviepy seaborn opencv-python==4.5.5.64 scikit-image
 RUN pip install --no-deps lpips
-
-# Install torch-scatter
-RUN pip install torch-scatter --no-binary :all:
-
-# Install segmentation models pytorch
-RUN pip install git+https://github.com/qubvel/segmentation_models.pytorch
-
-# Install Minkowski Engine
-RUN pip install git+https://github.com/NVIDIA/MinkowskiEngine.git
-
-# Install WandB
-RUN pip install wandb
 
 ##### CLEANUP
 RUN apt-get autoremove -y && rm -rf /tmp/* /var/tmp/* && apt-get clean && rm -rf /var/lib/apt/lists/*

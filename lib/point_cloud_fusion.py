@@ -1,5 +1,4 @@
 import os
-
 import torch
 from torch.utils.cpp_extension import load
 
@@ -13,6 +12,12 @@ point_cloud_fusion_util_cuda = load(
         verbose=True)
 
 def apply_point_cloud_fusion(grid_counter, point_cloud_locations, min_range, max_range, grid_semantic=None, point_cloud_logprobs=None, verbose=False):
+    assert grid_counter.is_cuda
+    assert point_cloud_locations.is_cuda
+    assert min_range.is_cuda
+    assert max_range.is_cuda
+    assert grid_semantic is None or grid_semantic.is_cuda
+    assert point_cloud_logprobs is None or point_cloud_logprobs.is_cuda
     # TODO: assert validity of inputs and document function
     # make sure the shape of grid_counter is suitable
     if len(grid_counter.shape) == 4:
