@@ -102,7 +102,7 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
             if ray_semseg is None:
                 if verbose:
                     print('Warning: semantic voxel grid detected, but no semantic segmentation provided for rays! Applying counting model without Bayes filter.')
-                return counting_model_util_cuda.counting_model_free_function(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, n_steps), None
+                return counting_model_util_cuda.counting_model_free_function(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, n_steps)
             else:
                 # if there is a semantic segmentation, make sure that the number of classes matches
                 assert ray_semseg.shape[-1] == n_classes
@@ -124,4 +124,4 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
                     print('Warning: semantic segmentation along rays detected, but no semantic map given! Applying counting model without Bayes filter.')
             else:
                 ray_distances_background = ray_distances
-            return counting_model_util_cuda.counting_model_free_function(grid_counter, ray_origins, ray_directions, ray_distances_background, min_range, max_range, n_steps), None
+            return counting_model_util_cuda.counting_model_free_function(grid_counter, ray_origins, ray_directions, ray_distances_background, min_range, max_range, n_steps)
