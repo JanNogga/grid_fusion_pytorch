@@ -12,13 +12,16 @@ counting_model_util_cuda = load(
             for path in ['cuda/counting_model.cpp', 'cuda/counting_model.cu']],
         verbose=True)
 
-def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, grid_semantic=None, ray_semseg=None, n_steps=2048, background_range = 5., verbose=False, invalidate_background=False):
-    assert grid_counter.is_cuda
-    assert ray_origins.is_cuda
-    assert ray_directions.is_cuda
-    assert ray_distances.is_cuda
-    assert grid_semantic is None or grid_semantic.is_cuda
-    assert ray_semseg is None or ray_semseg.is_cuda
+def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, grid_semantic=None, ray_semseg=None, n_steps=2048, background_range = 5., verbose=False, invalidate_background=False, assert_inputs=True):
+    if assert_inputs:
+        assert grid_counter.is_cuda
+        assert ray_origins.is_cuda
+        assert ray_directions.is_cuda
+        assert ray_distances.is_cuda
+        assert grid_semantic is None or (grid_semantic.is_cuda and not (grid_semantic >= 0.).any())
+        assert ray_semseg is None or (ray_semseg.is_cuda and not (ray_semseg >= 0.).any())
+        assert min_range.is_cuda
+        assert max_range.is_cuda
     # TODO: assert validity of inputs and document function
     # make sure the shape of grid_counter is suitable
     if len(grid_counter.shape) == 4:
@@ -66,7 +69,7 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
             if ray_semseg is None:
                 if verbose:
                     print('Warning: semantic voxel grid detected, but no semantic segmentation provided for rays! Counting hits without Bayes filter.')
-                return counting_model_util_cuda.hit_counter_free_function(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range, n_steps)
+                return counting_model_util_cuda.hit_counter_free_function(grid_counter, ray_origins, ray_directions, ray_distances, min_range, max_range)
             else:
             # if there is a semantic segmentation, make sure that the number of classes matches
                 assert ray_semseg.shape[-1] == n_classes
@@ -74,7 +77,7 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
                 ray_distances_background = ray_distances.clone()
                 ray_distances_background[torch.isnan(ray_semseg).any(-1)] = float('nan') if invalidate_background else background_range
                 # obtain aggregated hit counter and fused semantic map
-                grid_counter_out, grid_semantic_out = counting_model_util_cuda.hit_counter_bayes_free_function(grid_counter, grid_semantic, ray_origins, ray_directions, ray_distances_background, ray_semseg, min_range, max_range, n_steps)
+                grid_counter_out, grid_semantic_out = counting_model_util_cuda.hit_counter_bayes_free_function(grid_counter, grid_semantic, ray_origins, ray_directions, ray_distances_background, ray_semseg, min_range, max_range)
                 # normalize semantic map
                 grid_semantic_out -= torch.logsumexp(grid_semantic_out, dim=1, keepdim=True)
                 return grid_counter_out, grid_semantic_out
@@ -90,7 +93,7 @@ def apply_counting_model(grid_counter, ray_origins, ray_directions, ray_distance
                     print('Warning: semantic segmentation along rays detected, but no semantic map given! Incrementing hit counter for foreground pixels without Bayes filter.')
             else:
                 ray_distances_background = ray_distances
-            return counting_model_util_cuda.hit_counter_free_function(grid_counter, ray_origins, ray_directions, ray_distances_background, min_range, max_range, n_steps)
+            return counting_model_util_cuda.hit_counter_free_function(grid_counter, ray_origins, ray_directions, ray_distances_background, min_range, max_range)
     # on the other hand, if misses are counted too, refer to the corresponding functions
     else:
         if n_counters > 2:
