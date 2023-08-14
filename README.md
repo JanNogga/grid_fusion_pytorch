@@ -15,4 +15,4 @@ pip install ninja
 ```
 
 ## Usage
-Check out the [colab example](https://pytorch.org/docs/stable/cpp_extension.html#torch-utils-cpp-extension).
+Check out the [colab demo](https://colab.research.google.com/github/JanNogga/grid_fusion_pytorch/blob/main/example_colab.ipynb).
