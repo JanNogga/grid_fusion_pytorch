@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grid_fusion_pytorch"
+version = "0.1"
+authors = [
+  { name="Jan Nogga", email="nogga@ais.uni-bonn.de" },
+]
+description = "Efficient operations for fusing semantically annotated RGB-D measurements in a 3D voxel grid in pytorch."
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "GNU General Public License v3 (GPLv3)"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]  # list of folders that contain the packages (["."] by default)
+include = ["*"]  # package names should match these glob patterns (["*"] by default)
+exclude = []  # exclude packages matching these glob patterns (empty by default)
+namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
+
+[tool.setuptools.dynamic]
+version = {attr = "grid_fusion_pytorch.VERSION"}
+readme = {file = ["README.md"]}
+
+[project.urls]
+"Homepage" = "https://github.com/JanNogga/grid_fusion_pytorch"
+"Bug Tracker" = "https://github.com/JanNogga/grid_fusion_pytorch/issues"
