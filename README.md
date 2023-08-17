@@ -11,4 +11,4 @@ pip install grid-fusion-pytorch
 [PyTorch](https://pytorch.org/get-started/locally/) must be installed with CUDA support.
 
 ## Usage
-Check out the [colab demo](https://colab.research.google.com/github/JanNogga/grid_fusion_pytorch/blob/main/example_colab.ipynb).
+Check out the [colab demo](https://colab.research.google.com/github/JanNogga/grid_fusion_pytorch/blob/main/colab_demo.ipynb).
