@@ -8,11 +8,7 @@ pip install grid-fusion-pytorch
 ```
 
 ## Requirements
-[PyTorch](https://pytorch.org/get-started/locally/) must be installed with CUDA support. Also, [Ninja](https://ninja-build.org/) is required to load C++ extensions. Install it with pip.
-
-```console
-pip install ninja
-```
+[PyTorch](https://pytorch.org/get-started/locally/) must be installed with CUDA support.
 
 ## Usage
 Check out the [colab demo](https://colab.research.google.com/github/JanNogga/grid_fusion_pytorch/blob/main/example_colab.ipynb).
